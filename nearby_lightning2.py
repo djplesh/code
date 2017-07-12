@@ -21,7 +21,16 @@ output has same columns with the distance (in miles) after the lat lon values
 from geopy.distance import vincenty 
 import os
 import datetime
+import numpy as np
 
+
+def find_nearest(array, value):    
+    """find the closest value in an array to the called value"""
+    
+    x = np.searchsorted(array, value)
+    if x == -1:
+        x = 0        
+    return x
 
 def fix_num(n):    
     """convert integer to string, add 0 if single digit"""
@@ -203,11 +212,26 @@ def nearby_lightning(box_num, date):
         for i in range(len(strikes[1])):
             if strikes[1][i]<5:
                 strikes_5mi.append(strikes[0][i])
-        return strikes_5mi
+        return strikes_5mi, strikes
 
     
 
 
+def find_strikes(box_num, date, time_sec):
+
+    array = array_name(box_num)
+    strikes_5mi, strikes_all = nearby_lightning(box_num, date)
+    
+    strikes_5mi = np.array(strikes_5mi)
+    strike_idx = find_nearest(strikes_5mi, time_sec)
+    
+    time_idx = find_nearest(strikes_all[0], time_sec)
+    print str(strikes_all[1][time_idx]) + 'miles at: ' + str(strikes_all[0][time_idx])
+    
+    
+    print strikes_5mi[strike_idx] - time_sec
+    return strikes_5mi
+    
     
 
 
