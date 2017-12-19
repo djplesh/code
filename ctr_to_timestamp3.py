@@ -11,6 +11,8 @@ import datetime
 import numpy as np
 from datetime import timedelta
 
+from numba import jit
+
 from pyTDMS4 import read
 
 
@@ -80,8 +82,8 @@ def first_pps(ctr1):
 def get_pps(ctr1_file):    
     """from the ctr1 file obtain the position of all pps and the clk rates"""
     
-    ctr = get_ctr(ctr1_file)    
-    ctr1_full = ctr_rollover(ctr)   
+    ctr1_full = get_ctr(ctr1_file, True)    
+    #ctr1_full = ctr_rollover(ctr)   
     pos = []
     ctr1_full = np.array(ctr1_full)
     
@@ -94,9 +96,9 @@ def get_pps(ctr1_file):
     pos.append(a)    
     
     for k in range(600):
-        diffs = []
+        # diffs = []
         diffs = ctr1_full[(a + 1):] - ctr1_full[a]
-        diffs = np.array(diffs)
+        # diffs = np.array(diffs)
         b = find_nearest(diffs, 20000000)
         if diffs[b] < 19999000:
             break   # reached end of file before 600 pps
@@ -135,14 +137,12 @@ def ctr_to_times(ctr_data, pps_ctrs, clks, ctr_file, i):
 
     file_time = [x.strip() for x in ctr_file.split(',')][1][:6]
     start_time = start_times(file_time)
-    if i == 0:
-        start_time = start_time - 86400
     time_data = []
     c = 0
     sec = 0   
     for ctr in ctr_data:
         if sec < len(pps_ctrs):
-            if ctr - pps_ctrs[sec] > 0:
+            if ctr - pps_ctrs[sec] >= 0:
                 sec = sec + 1
                 c = sec - 1
                 if c == len(clks):
@@ -169,21 +169,31 @@ def ctr_rollover(ctr):
         ctr_full.append(ctr[k] + (2**32)*v)        
     return ctr_full
 
-def get_ctr(file_name):
+def get_ctr(file_name, trim = False):
     '''read in ctr data'''
     
     data_raw = read(file_name)
     data = data_raw[1][data_raw[1].keys()[0]]
-    data = list(data)    
+    if len(data) > 0:
+        data = list(data)    
     
     data2 = ctr_rollover(data)
+    data3 = []
+    if len(data2) > 0 and trim == True:
+        for i in range(1, len(data2)):
+            if data2[i] - data2[i-1] > 270:
+                data3.append(data2[i-1])
+        data3.append(data2[-1])
+        return data3
     return data2
 
-def get_times(file_name, pps_ctr1, clks, i):     
+def get_times(f, pps_ctr1, clks, i):     
     """read in ctr data and call to convert to times""" 
     
-    data = get_ctr(file_name)
-    times = ctr_to_times(data, pps_ctr1, clks, file_name, i)      
+    if f[f.rfind('/')+1:f.rfind('/')+5] == 'ctr1': trim = True
+    else: trim = False
+    data = get_ctr(f, trim)
+    times = ctr_to_times(data, pps_ctr1, clks, f, i)      
     return times
 
 ##########################################################################
@@ -217,79 +227,53 @@ def get_bgo(ctr1_file, ctr2_file, ctr3_file, ctr1_pps_idx):
     return bgo1, bgo2, bgo3
     
 
+@jit(nopython=True)
+def match(ctr1, ctr2, ctr3, ctr1_pps_idx):
 
-  
-def get_idx(timestamps, ctr1_pps_idx):     
-    """compare ctr2 and ctr3 to ctr1 to create an idx file for ctr1 triggers"""
-    
-    idx = []
+    bgo1 = []
+    idx = np.zeros(len(ctr1))
     j = 0
     count = 0
-    ctr1_times_arr = np.array(timestamps[0])    
-    ctr2_times_arr = np.array(timestamps[1])
-    ctr3_times_arr = np.array(timestamps[2])
-       
-    for line in ctr1_times_arr:
+    for line in ctr1:
         if count == ctr1_pps_idx[j]:
-            idx.append('pps')
+            idx[count] = 9
             j = j + 1
             if j > len(ctr1_pps_idx) - 1:
                 j = j - 1
             count = count + 1
             continue
-        ctr2_diff = np.abs(ctr2_times_arr - line)
-        ctr3_diff = np.abs(ctr3_times_arr - line)
+        ctr2_diff = np.abs(ctr2 - line)
+        ctr3_diff = np.abs(ctr3 - line)        
         ctr2_matches = np.where(ctr2_diff <= 0.0000002)[0]
         ctr3_matches = np.where(ctr3_diff <= 0.0000002)[0]
         n2_matches = len(ctr2_matches)
         n3_matches = len(ctr3_matches)
         if n2_matches == n3_matches == 1:
-            idx.append('both')
+            idx[count] = 23
         elif n2_matches != 0:
-            idx.append('bgo2')
+            idx[count] = 2
         elif n3_matches != 0:
-            idx.append('bgo3')
+            idx[count] = 3
         elif n2_matches == n3_matches == 0:
-            idx.append('bgo1')
+            idx[count] = 1
+            bgo1.append(line)
         count = count + 1
-    bgo1 = []
-    c = 0 
-    for line in idx:
-        if line == 'bgo1':
-            bgo1.append(ctr1_times_arr[c])
-            c = c + 1
-        else: 
-            c = c + 1
-    del ctr1_times_arr
-    del ctr2_times_arr
-    del ctr3_times_arr
+    return idx, bgo1
+    
+
+  
+def get_idx(timestamps, ctr1_pps_idx):     
+    """compare ctr2 and ctr3 to ctr1 to create an idx file for ctr1 triggers"""
+    
+    ctr1_times_arr = np.array(timestamps[0])    
+    ctr2_times_arr = np.array(timestamps[1])
+    ctr3_times_arr = np.array(timestamps[2])
+    ctr1_pps = np.array(ctr1_pps_idx)
+    
+    idx, bgo1 = match(ctr1_times_arr, ctr2_times_arr, ctr3_times_arr, ctr1_pps)
+      
+
     return idx, bgo1
 
 ##########################################################################
 ########################################################################## 
-def fix_num(n):    
-    """convert integer to string, add 0 if single digit"""
-    
-    if n < 10: n_s = '0' + str(n)
-    else:
-        n_s = str(n)
-    return n_s
-
-def ints_to_date(d, m, y):    
-    """from integers for day month and year return date string,
-    format yyyy_mm_dd"""
-    
-    m_s = fix_num(m)
-    d_s = fix_num(d)
-    y_s = str(y)
-    date_s = y_s + '_' + m_s + '_' + d_s   
-    return date_s
-
-def date_to_ints(date):    
-    """from date in string format yyyy_mm_dd 
-    return integer values for day month and year"""
-    
-    d = int(date[8:10])
-    m = int(date[5:7])
-    y = int(date[0:4])        
-    return d, m, y  

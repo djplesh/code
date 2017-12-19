@@ -95,12 +95,12 @@ def bgo_data(files):
 
 
 ##############################################################################
-def make_plots(path0 = None, y_max = None): 
+def make_plots(path0 = None, y_max = None, bins = 1000): 
     if not path0:
-        path0='C:/Users/tetra/calibrations/LSU/080116_th/'
+        path0='C:/Users/tetra/calibrations/LSU/misc/LSU_01/20171127_bkgd/'
     
     
-    bin_num=np.linspace(0,32769,1000)
+    bin_num=np.linspace(0,32769,bins)
     
     if not y_max:
         y_max=3000
@@ -125,7 +125,7 @@ def make_plots(path0 = None, y_max = None):
     ax6.hist(dev2_bgo[2],bin_num,histtype='step',color='purple',alpha=0.7)
     
     plt.ylim(0,y_max)
-    plt.xticks((0,5000,10000,15000,20000,25000,30000,35000),('0','5','10','15','20','25','30','35'))
+    #plt.xticks((0,5000,10000,15000,20000,25000,30000,35000),('0','5','10','15','20','25','30','35'))
     f.text(0.3,0.04, 'channel x1000',ha='center')
     f.text(0.723,0.04, 'channel x1000',ha='center')
     f.text(0.02,0.25,'bgo3 counts',va='center',rotation='vertical')
