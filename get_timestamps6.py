@@ -134,7 +134,7 @@ def run_data(loop_day, loc, box_num, path0):
     """for a given day and box, create npz files for each bgo timestamps and 
     hist the data in 2ms timebins
     """
-    
+    start_time = time.time()
     date_str = tool.ints_to_date(loop_day.day, loop_day.month, loop_day.year)
     folder = date_str[:4] + '_' + date_str[5:7] + '/'
     output_path = 'Y:/' + box_num + '/' + folder
@@ -165,7 +165,7 @@ def run_data(loop_day, loc, box_num, path0):
                         with open('C:/Users/tetra/errors.txt', 'a') as f:
                             f.write(date_str + ' Dev2' + '\n' + '\n')
                             return False
-
+                print time.time() - start_time
                 bgo4 = np.array(dev1_data[0])
                 bgo5 = np.array(dev1_data[1])
                 bgo6 = np.array(dev1_data[2])
@@ -176,7 +176,7 @@ def run_data(loop_day, loc, box_num, path0):
                 file_ts = output_path + 'ts_' + date_str[8:10]
                 if len(dev1_data[0]) > 0 or len(dev2_data[0]) > 0:
                     np.savez(file_ts, bgo1=bgo1, bgo2=bgo2, bgo3=bgo3, bgo4=bgo4, bgo5=bgo5, bgo6=bgo6)
-
+                print time.time() - start_time
             except IndexError as e:
                 with open('C:/Users/tetra/errors.txt', 'a') as f:
                     f.write(box_num + ' ' + date_str + ': ' + str(e) + '\n')
@@ -187,20 +187,7 @@ def run_data(loop_day, loc, box_num, path0):
             # dev1_data = 'calibration day'
             # dev2_data = 'calibration day'
             return
-        if len(dev2_data[0]) > 0 or len(dev1_data[0]) > 0:
-            sum_data = dev1_data[0] + dev1_data[1] + dev1_data[2] + dev2_data[0] + dev2_data[1] + dev2_data[2]
-            bgo, bins0 = np.histogram(sum_data, 43200000, (0, 86400))
-            non_zero = np.where(bgo != 0)
-            bins = []
-            counts = []
-            for line in non_zero[0]:
-                if bgo[line] < 500: #deals with noisy bins with ~900 counts
-                    bins.append(np.int32(line))
-                    counts.append(np.int16(bgo[line]))
-            bins = np.array(bins)
-            counts = np.array(counts)
-            new_hist = output_path + 'hist_' + date_str[8:10]
-            np.savez(new_hist, bins=bins, counts=counts)
+
     return True
 
 ##############################################################################

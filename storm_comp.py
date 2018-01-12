@@ -77,8 +77,11 @@ def add_boxes(box_list, date_str):
 ##############################################################################
 ##############################################################################        
 ##############################################################################        
-def event_search(box_num, start_date, duration = 1, threshold = 20, source = 'wwlln'):
-    """search bgo data for candidate events above user defined threshold"""   
+def event_search(box_num, start_date, time_window = 5, duration = 1, threshold = 20, source = 'wwlln'):
+    """search bgo data for candidate events above user defined threshold
+    time_window is number of seconds before and after event to search for lighting
+    default is 5 seconds
+    """   
     
     start_d = int(start_date[8:10])
     start_m = int(start_date[5:7])
@@ -119,6 +122,10 @@ def event_search(box_num, start_date, duration = 1, threshold = 20, source = 'ww
             std = np.sqrt((np.sum((hist_data2-ave)**2, axis = 0)[1] \
             + (43200000 - len(hist_data2))*ave**2)/(43200000-1))
             
+            threshold_counts = ave + std * threshold
+            print threshold_counts
+            if threshold_counts < 6:
+                continue
             above = hist_data['counts'] - ave
             above[above < 0] = 0
             bin_sig = above / std
@@ -153,23 +160,26 @@ def event_search(box_num, start_date, duration = 1, threshold = 20, source = 'ww
             print str(len(bgo_triggers)) + ' events over threshold on ' + date_str
             print str(len(strikes_8km)) + ' lightning strikes within 8km on ' + date_str
             for trig in bgo_triggers:
-                strikes_8km_5s, dists_8km_5s = recent_strikes(strikes_8km, strikes_all, hist_data2[trig][0])
+                strikes_8km_5s, dists_8km_5s = recent_strikes(strikes_8km, strikes_all, hist_data2[trig][0], time_window)
                 if len(strikes_8km_5s) == 0:
                     continue
                 trig_ts = hist_data2[:,0][trig]
-                xmin_bin = trig_ts - 5
-                xmax_bin = trig_ts + 5
+                xmin_bin = trig_ts - time_window
+                xmax_bin = trig_ts + time_window
                 xmi = tool.get_nearest(hist_data2[:,0], xmin_bin)
                 xma = tool.get_nearest(hist_data2[:,0], xmax_bin)
                 plot_s = []
                 plot_d = []
-                if len(strikes_8km_5s) > 0:
-                    for i in range(len(strikes_8km_5s)):
-                        if strikes_8km_5s[i] < hist_data2[xma][0] and strikes_8km_5s[i] > hist_data2[xmi][0]:
-                            plot_s.append(strikes_8km_5s[i])
-                            plot_d.append(dists_8km_5s[i])
-                        i = i + 1
-                    if len(plot_s) == 0: continue
+                
+                
+                for i in range(len(strikes_8km_5s)):
+                    if strikes_8km_5s[i] < hist_data2[xma][0] and strikes_8km_5s[i] > hist_data2[xmi][0]:
+                        plot_s.append(strikes_8km_5s[i])
+                        plot_d.append(dists_8km_5s[i])
+                    i = i + 1
+                if len(plot_s) == 0: continue
+                print len(plot_s)
+                print str(len(strikes_8km_5s)) + 'strikes in time window'
                 #fig1, ax1 = plt.subplots(1)
                 f, axarr = plt.subplots(2)
                 axarr[1].bar(hist_data2[:,0][xmi:xma],hist_data2[:,1][xmi:xma],
@@ -186,8 +196,8 @@ def event_search(box_num, start_date, duration = 1, threshold = 20, source = 'ww
                     ax2.tick_params('y', colors = 'g')
                     a = ax2.axis()
                     ax2.axis([a[0], a[1], 0, 8])   
-                    print np.abs(plot_s - hist_data2[trig][0])
-                    print min(plot_d)
+                    #print np.abs(plot_s - hist_data2[trig][0])
+                    #print min(plot_d)
                 
                 #plt.xlim([hist_data2[:,0][xmi],hist_data2[:,0][xma]+.002])
                 axarr[1].set_xlim([hist_data2[:,0][xmi],hist_data2[:,0][xma]+.002])    
@@ -199,9 +209,9 @@ def event_search(box_num, start_date, duration = 1, threshold = 20, source = 'ww
                 xmi = tool.get_nearest(hist_data2[:,0], xmin_bin)
                 xma = tool.get_nearest(hist_data2[:,0], xmax_bin)
                 zoom_counts, zoom_bins = zoom_data(box_num, date_str, xmin_bin, xmax_bin)
-                if sum(zoom_counts) < 7:
-                    plt.close()
-                    continue
+                # if sum(zoom_counts) < 7:
+                    # plt.close()
+                    # continue
                 hist_dataz = np.array(zip(zoom_bins, zoom_counts))
                 #print sum(zoom_counts)
                 #fig2, ax2 = plt.subplots(1)

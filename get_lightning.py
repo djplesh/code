@@ -261,15 +261,16 @@ def nearby_strikes(loc, date, source, number = None):
     return strikes_8km, strikes
 
 
-def recent_strikes(strikes_8km, strikes_all, time_sec):
+def recent_strikes(strikes_8km, strikes_all, time_sec, time_window=5):
     """returns a list of timestamps and distances for lightning strikes from list
     within 5 seconds of given time
+    modified, now searches for strikes in time_window of seconds, default is 5
     """
     strikes_8km = np.array(strikes_8km)
    
     strikes_8km_5s = []
     for s in strikes_8km:
-        if np.abs(s-time_sec) < 5:
+        if np.abs(s-time_sec) < time_window:
             strikes_8km_5s.append(s)
     strike_dist = []
     for s in strikes_8km_5s:

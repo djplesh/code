@@ -7,7 +7,15 @@ def get_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return idx
     
+def fix_loc(loc):
 
+    if loc == 'pr' or loc == 3: loc = 'PR'
+    if loc == 'pan' or loc == 2: loc = 'PAN'
+    if loc == 'lsu' or loc == 1: loc = 'LSU'
+    if loc == 'uah' or loc == 4: loc = 'UAH'\
+    
+    return loc
+    
 def fix_num(n):    
     """convert integer to string, add 0 if single digit"""
     
