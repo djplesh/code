@@ -1,6 +1,6 @@
 from datetime import date
 from datetime import timedelta
-import ctr_to_timestamp3 as get
+import tetra_analysis.timestamps.ctr_to_timestamp3 as get
 import numpy as np
 import os
 

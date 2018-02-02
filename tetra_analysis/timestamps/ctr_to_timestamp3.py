@@ -13,7 +13,7 @@ from datetime import timedelta
 
 from numba import jit
 
-from pyTDMS4 import read
+from tetra_tools.pyTDMS4 import read
 
 
 ##########################################################################

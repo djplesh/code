@@ -19,7 +19,6 @@ def pyTDMS4_ctr(file_name, trim = False):
     data = data_raw[1][data_raw[1].keys()[0]]
     return data
     
-    
 def nptdms_analog(file_name, dev):
     tf = TdmsFile(file_name)
     grp = tf.groups()[0]
@@ -34,6 +33,6 @@ def nptdms_analog(file_name, dev):
     # ch6 = tf.object(grp, chs[6]).raw_data
     return ch0
     
-filename = 'E:/LSU_01/2017_12/Dev1/analog/GPGGA,0045800,302475218,N,0911072028,W,1,07,144,00024,M,-025,M,,57,3595017899.tdms'
+filename = 'E:/LSU_01/2017_12/Dev1/analog/GPGGA,00045800,302475218,N,0911072028,W,1,07,144,00024,M,-025,M,,57,3595017899.tdms'
 
 

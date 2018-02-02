@@ -19,7 +19,7 @@ plots
 """
 
 import os
-from pyTDMS4 import read
+from tetra_tools.pyTDMS4 import read
 import numpy as np
 import matplotlib.pyplot as plt
 

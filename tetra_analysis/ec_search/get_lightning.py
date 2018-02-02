@@ -15,7 +15,7 @@ import numpy as np
 import gzip
 import csv
 
-import tools as tool
+import tetra_tools.tools as tool
 
 
 def next_day(date):    
@@ -153,6 +153,7 @@ def entln(date, loc):
     times_str = []
 
     for f in os.listdir(folder):
+        print f
         if date_int > int(f[0:8]) and date_int < int(f[12:20]):
             filename = folder + f
             with open(filename, 'rb') as infile:

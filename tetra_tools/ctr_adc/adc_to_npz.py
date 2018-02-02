@@ -2,7 +2,7 @@
 """
 Created on Thu Apr 21 11:17:05 2016
 this will read in the analog tdms files containing adc information 
-plots the geometric mean of pmts
+and save the information in a .npz file
 @author: DJ
 """
 import numpy as np

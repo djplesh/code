@@ -48,6 +48,5 @@ Temporary Items
 
 
 old/*
-old_backup/*
 gui/*
 *.pyc

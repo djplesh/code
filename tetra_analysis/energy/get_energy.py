@@ -14,8 +14,8 @@ import numpy as np
 import datetime
 import numpy.ma as ma
 
-import ctr_to_timestamp3 as get
-from pyTDMS4 import read
+import tetra_analysis.timestamps.ctr_to_timestamp3 as get
+from tetra_tools.pyTDMS4 import read
 import tools as tool
 from numba import jit
 from scipy.stats.mstats import gmean

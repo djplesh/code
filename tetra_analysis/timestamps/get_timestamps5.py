@@ -17,7 +17,7 @@ remember: the bgo for each ctr1 cannot give a good rate estimate
 """
 
 import ctr_to_timestamp3 as get
-import tools as tool
+import tetra_tools.tools as tool
 
 import os
 import numpy as np

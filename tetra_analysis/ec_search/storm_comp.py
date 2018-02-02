@@ -17,7 +17,7 @@ import os
 
 from get_lightning import recent_strikes
 from get_lightning import nearby_strikes
-import tools as tool
+import tetra_tools.tools as tool
 
 ##############################################################################
 ##############################################################################
@@ -46,10 +46,12 @@ def zoom_data(box_list, date_str, xmin, xmax):
     for box in box_list:
         path = 'Y:/' + box + '/' + folder
         ts_file = path + 'ts_' + date_str[8:] + '.npz'
-        
+        if not os.path.exists(ts_file):
+            continue
         ts_data = np.load(ts_file)
-        total_data = np.concatenate([total_data, ts_data['bgo1'], ts_data['bgo2'], ts_data['bgo3'] \
-        ,ts_data['bgo4'], ts_data['bgo5'], ts_data['bgo6']])
+        for key in ts_data.keys():
+            total_data = np.concatenate([total_data, ts_data[key]])
+        #total_data = np.concatenate([total_data, ts_data['bgo1'], ts_data['bgo2'], ts_data['bgo3'],ts_data['bgo4'], ts_data['bgo5'], ts_data['bgo6']])
     zoom_data = []
     for ts in total_data:
         if xmin < ts < xmax:
@@ -65,10 +67,12 @@ def add_boxes(box_list, date_str):
     for box in box_list:
         path = 'Y:/' + box + '/' + folder
         ts_file = path + 'ts_' + date_str[8:] + '.npz'
-        
+        if not os.path.exists(ts_file):
+            continue
         ts_data = np.load(ts_file)
-        total_data = np.concatenate([total_data, ts_data['bgo1'], ts_data['bgo2'], ts_data['bgo3'] \
-        ,ts_data['bgo4'], ts_data['bgo5'], ts_data['bgo6']])
+        for key in ts_data.keys():
+            total_data = np.concatenate([total_data, ts_data[key]])
+        #total_data = np.concatenate([total_data, ts_data['bgo1'], ts_data['bgo2'], ts_data['bgo3'], ts_data['bgo4'], ts_data['bgo5'], ts_data['bgo6']])
     
     bgo, bins = np.histogram(total_data, 43200000, (0, 86400))
     return bgo
@@ -105,7 +109,10 @@ def event_search(box_num, start_date, time_window = 5, duration = 1, threshold =
             path = 'D:/rates/' + box_num[0] + '/' + folder
             path = 'Y:/' + box_num[0] + '/' + folder
            
-            ts_file =  path + 'ts_' + date_str[8:]+'.npz' 
+            ts_file =  path + 'ts_' + date_str[8:]+'.npz'
+
+
+                
             hist_file = path + 'hist_' + date_str[8:]+'.npz'
             
             if not os.path.exists(hist_file):
@@ -160,6 +167,8 @@ def event_search(box_num, start_date, time_window = 5, duration = 1, threshold =
             print str(len(bgo_triggers)) + ' events over threshold on ' + date_str
             print str(len(strikes_8km)) + ' lightning strikes within 8km on ' + date_str
             for trig in bgo_triggers:
+                print trig
+
                 strikes_8km_5s, dists_8km_5s = recent_strikes(strikes_8km, strikes_all, hist_data2[trig][0], time_window)
                 if len(strikes_8km_5s) == 0:
                     continue

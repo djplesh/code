@@ -7,7 +7,7 @@ plots the geometric mean of pmts
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from pyTDMS4 import read
+from tetra_tools.pyTDMS4 import read
 import os
 from scipy.stats.mstats import gmean
 

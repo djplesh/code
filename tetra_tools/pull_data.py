@@ -3,7 +3,7 @@ from datetime import timedelta
 from datetime import datetime
 import urllib
 import os
-from tools import fix_num
+from tetra_tools.tools import fix_num
 
 
 #sp.Popen('robocopy Z:\LSU_01\ E:/LSU_01//09_2017/ *.* /MAXAGE:20170901 /MINAGE:20171001 /E')
