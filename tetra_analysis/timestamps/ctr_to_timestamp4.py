@@ -197,34 +197,6 @@ def get_times(f, pps_ctr1, clks, i):
 
 ##########################################################################
 ##########################################################################
-def get_bgo(ctr1_file, ctr2_file, ctr3_file, ctr1_pps_idx):
-
-    both = []
-    bgo1 = []
-    bgo2 = []
-    bgo3 = []
-#    print ctr1_file
-    ctr1 = np.array(get_ctr(ctr1_file))
-    ctr2 = np.array(get_ctr(ctr2_file))
-    ctr3 = np.array(get_ctr(ctr3_file))
-
-    c= 0
-    for x in ctr1:
-        if len(ctr2) != 0 and len(ctr3) != 0 and (np.abs(ctr2 - x)).min() < 3 \
-        and (np.abs(ctr3 - x)).min() < 3:
-            both.append(x)
-        elif len(ctr2) != 0 and (np.abs(ctr2 - x)).min < 3:
-            bgo2.append(x)
-        elif len(ctr3) != 0 and (np.abs(ctr3 - x)).min < 3:
-            bgo3.append(x)
-        elif x == ctr1[ctr1_pps_idx[c]]:
-            c += 1
-            if c == len(ctr1_pps_idx): c = c-1
-        else:
-            bgo1.append(x)
-
-    return bgo1, bgo2, bgo3
-
 
 @jit(nopython=True)
 def match(ctr1, ctr2, ctr3, ctr1_pps_idx):
@@ -264,13 +236,12 @@ def match(ctr1, ctr2, ctr3, ctr1_pps_idx):
 def get_idx(timestamps, ctr1_pps_idx):
     """compare ctr2 and ctr3 to ctr1 to create an idx file for ctr1 triggers"""
 
-    ctr1_times_arr = np.array(timestamps[0])
-    ctr2_times_arr = np.array(timestamps[1])
-    ctr3_times_arr = np.array(timestamps[2])
+    ctr1_times_arr = np.array(timestamps['ctr1'])
+    ctr2_times_arr = np.array(timestamps['ctr2'])
+    ctr3_times_arr = np.array(timestamps['ctr3'])
     ctr1_pps = np.array(ctr1_pps_idx)
 
     idx, bgo1 = match(ctr1_times_arr, ctr2_times_arr, ctr3_times_arr, ctr1_pps)
-
 
     return idx, bgo1
 

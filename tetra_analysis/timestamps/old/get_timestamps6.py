@@ -134,8 +134,8 @@ def run_data(loop_day, loc, box_num, path0):
     """for a given day and box, create npz files for each bgo timestamps and 
     hist the data in 2ms timebins
     """
-    #start_time = time.time()
-    date_str = tool.ints_to_date(loop_day.day, loop_day.month, loop_day.year)
+
+    date_str = loop_day.strftime("%Y_%m_%d")
     folder = date_str[:4] + '_' + date_str[5:7] + '/'
     output_path = 'Y:/' + box_num + '/' + folder
     if not os.path.exists(output_path):

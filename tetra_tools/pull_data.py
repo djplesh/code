@@ -1,6 +1,7 @@
 import subprocess as sp
 from datetime import timedelta
 from datetime import datetime
+from datetime import date
 import urllib
 import os
 from tetra_tools.tools import fix_num
@@ -41,17 +42,17 @@ def get_wwlln(year = None, month = None, day = None):
     
     if day == None:
         #default is one week prior, files are uploaded a week delayed
-        day = datetime.today() - timedelta(7)
-        day_str = str(day.year) + fix_num(day.month) + fix_num(day.day)
-        folder = str(day.year) + '_' + fix_num(day.month)
+        d = date.today() - timedelta(7)
+        folder = d.strftime("%Y_%m")
     else:
-        day_str = str(year) + fix_num(month) + fix_num(day)
-        folder = str(year) + '_' + fix_num(month)
-    
+        d = date(year, month, day)
+        folder = d.strftime("%Y_%m")
     output_path = 'C:/Users/tetra/lightning/WWLLN/' + folder
     if not os.path.exists(output_path):
         os.makedirs(output_path)
-    
-    url = 'http://LSU:deirdreWWLLN17@wwlln.net/hostdata/A' + day_str + '.loc'
-    path = output_path + '/A' + day_str + '.loc'    
-    urllib.urlretrieve(url, filename = path)
+    for i in range(1, d.day+1):
+        x = date(d.year, d.month, i)
+        path = output_path + '/A' + x.strftime("%Y%m%d") + '.loc'
+        if not os.path.isfile(path):
+            url = 'http://LSU:deirdreWWLLN17@wwlln.net/hostdata/A' + x.strftime("%Y%m%d") + '.loc'
+            urllib.urlretrieve(url, filename = path)

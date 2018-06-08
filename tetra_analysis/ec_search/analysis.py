@@ -1,14 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from datetime import date
-from datetime import timedelta
+import datetime as dt
 import sys
 
 from tetra_tools.tools import *
 import lightning
-
-
 
 
 class Tetra(object):
@@ -22,36 +19,33 @@ class Tetra(object):
             boxes.append(fix_num(b))
         self.box = boxes
 
-    def date_str(self, day, month, year):
+        
+    def get_ts(self, day, month, year, keys = 'all'):
 
         day = fix_num(day)
         month = fix_num(month)
         year = fix_num(year)
-        self.ts_date = year + '_' + month + '_' + day
-
-    def get_ts(self, day, month, year):
-
-        day = fix_num(day)
-        month = fix_num(month)
-        year = fix_num(year)
-        self.ts_date = year + '_' + month + '_' + day
-        all_data = np.array([])
+        if keys == 'all': keys = ['bgo1','bgo2','bgo3','bgo4','bgo5','bgo6']
+        #date_str = year + '_' + month + '_' + day
+        timestamps = np.array([])
         for b in self.box:
-            fp = 'Y:/' + self.loc + '_' + b + '/' + year + '_' + month + '/ts_' + day + '.npz'
+            #fp = 'Y:/' + self.loc + '_' + b + '/' + year + '_' + month + '/ts_' + day + '.npz'
+            fp = 'Y:/{0}_{1}/{2}_{3}/ts_{4}.npz'.format(self.loc, b, year, month, day)
             if not os.path.exists(fp): continue
             ts_file = np.load(fp)
             for key in ts_file.keys():
-                all_data = np.concatenate([all_data, ts_file[key]])
-        self.ts = all_data
-
-    def hist(self, bin_size):
+                if key in keys:
+                    timestamps = np.concatenate([timestamps, ts_file[key]])
+        return timestamps
+        
+    def hist(self, bin_size, ts):
 
         self.bin_size = bin_size
         if bin_size < .1:
             all_counts = np.array([])
             all_bins = np.array([])
             for i in range(24):
-                ts_1hr = self.ts[np.where(np.logical_and(self.ts < 3600 * (i+1), self.ts > 3600 * i))[0]]
+                ts_1hr = ts[np.where(np.logical_and(ts < 3600 * (i+1), ts > 3600 * i))[0]]
                 bins = np.linspace(0, 3600, 3600/bin_size + 1) + 3600 * i
                 counts = np.histogram(ts_1hr, bins)[0]
                 all_counts = np.concatenate([all_counts, counts])
@@ -61,81 +55,114 @@ class Tetra(object):
                     all_bins = np.concatenate([all_bins, bins[:]])
         else:
             all_bins = np.linspace(0, 86400, (86400/bin_size) + 1)
-            all_counts = np.histogram(self.ts, all_bins)[0]
+            all_counts = np.histogram(ts, all_bins)[0]
         bin_mid = all_bins[:-1] + bin_size/2
 
-        self.counts = all_counts
-        self.bin_mid = bin_mid
-        self.average = np.average(all_counts)
-        self.stddev = np.std(all_counts)
+        return all_counts, bin_mid
 
-    def nearby_lightning(self, source = 'entln'):
+    def sig_search(self, counts, sigma, d_str):
 
-        if not hasattr(self, 'source'): self.source = source
-        self.strikes_8km = lightning.nearby(self.loc, self.ts_date, self.source)
-
-    def event_search(self, sigma, source = 'entln', time_window = 5):
-
-        if not hasattr(self, 'source'): self.source = source
-        if not hasattr(self, 'strikes_8km'): self.strikes_8km = lightning.nearby(self.loc, self.ts_date, self.source)
-        if not hasattr(self, 'time_window'): self.time_window = time_window
-        self.min_counts = np.ceil(self.average + sigma * self.stddev)
-        ec = np.where(self.counts > self.min_counts)[0]
+        ave_rate = np.average(counts)
+        stddev = np.std(counts)
+        min_counts = np.ceil(ave_rate + sigma * stddev)
+        ec = np.where(counts > min_counts)[0]
         ec_num = len(ec)
+        self.trigs = ec * self.bin_size
+        if ec_num > 0:
+            print d_str, ec_num
+
+    def event_search(self, counts, bin_mid, strikes_8km, d_str, bin_size = .002, sigma = 20, f_out = None, source = 'entln', window = 5):
+
+        ave_rate = np.average(counts)
+        stddev = np.std(counts)
+        min_counts = np.ceil(ave_rate + sigma * stddev)
+        ec = np.where(counts > min_counts)[0]
+        ec_num = len(ec)
+        ec_ts = []
         if ec_num != 0:
-            #self.strikes_8km = lightning.nearby(self.loc, self.ts_date, source)
-            num_strikes = len(self.strikes_8km[0])
-            if ec_num < 100 and len(self.strikes_8km[0]) > 0:
-                #print str(ec_num) + ' events above ' + str(sigma) + ' sigma on ' + str(self.ts_date)
+            num_strikes = len(strikes_8km[0])
+            if ec_num < 1000 and len(strikes_8km[0]) > 0:
                 for x in ec:
-                    ec_time_sec = x * self.bin_size
-                    ec_lightning = lightning.recent(self.strikes_8km, ec_time_sec, self.time_window)
-                    if len(ec_lightning[0]) != 0:
-                        soonest = min(np.abs(ec_lightning[0] - ec_time_sec))
-                        d = np.where(np.logical_or(ec_lightning[0] == ec_time_sec + soonest, ec_lightning[0] == ec_time_sec - soonest))[0][0]
-                        nearest = min(ec_lightning[1])
-                        n = np.where(ec_lightning[1] == nearest)[0][0]
-                        print str(ec_time_sec) + ' on ' + str(self.ts_date)
-                        print str(len(ec_lightning[0])) + ' lightning strikes within ' + str(self.time_window) + ' seconds of event'
-                        print str('%.6f'%(soonest)) + ' seconds apart ' + str('%.3f'%(ec_lightning[1][d])) + ' kilometers away'
-                        print str('%.3f'%(min(ec_lightning[1]))) + ' kilometers away ' +str('%.6f'%(np.abs(ec_lightning[0][n] - ec_time_sec))) + ' seconds apart'
-                        print '\n'
+                    ec_time = x * bin_size
+                    ec_light = lightning.recent(strikes_8km, ec_time, window)
+                    if len(ec_light[0]) != 0:
+                        ec_ts.append(ec_time)
+                        soonest = min(np.abs(ec_light[0] - ec_time))
+                        t = np.where(np.logical_or(ec_light[0] == ec_time + soonest, ec_light[0] == ec_time - soonest))[0][0]
+                        nearest = min(ec_light[1])
+                        n = np.where(ec_light[1] == nearest)[0][0]
+                        line1 = str(ec_time) + ' on ' + d_str
+                        line2 = str(len(ec_light[0])) + ' lightning strikes within ' + str(window) + ' sec of event'
+                        line3 = str('%.6f'%(soonest)) + ' sec apart ' + str('%.3f'%(ec_light[1][t])) + ' kms away'
+                        line4 = str('%.3f'%(min(ec_light[1]))) + ' kms away ' +str('%.6f'%(np.abs(ec_light[0][n] - ec_time))) +' sec apart'
+                        if not f_out:
+                            print line1, '\n', line2, '\n', line3, '\n', line4, '\n'
+                        else:
+                            with open(f_out, 'a') as f:
+                                f.write(line1 + '\n' + line2 + '\n' + line3 + '\n' + line4 + '\n' + '\n')
+        self.ecs = ec_ts
 
-    def plot_hist(self):
+    def plot_hist(self, counts, bin_mid, bin_size, date_str):
 
-        plt.plot(self.bin_mid,self.counts)
-        plt.ylabel('Counts (' + str(self.bin_size) + ' second bins)')
-        plt.xlabel('Time (seconds) on ' + str(self.ts_date))
+        plt.plot(bin_mid,counts)
+        plt.ylabel('Counts (' + str(bin_size) + ' second bins)')
+        plt.xlabel('Time (seconds) on ' + date_str)
         plt.xlim([0,86400])
         plt.show()
 
-    def plot_strikes(self):
 
-        f, ax = plt.subplots(1)
-        ax.plot(self.bin_mid,self.counts)
-        ax.set_ylabel('Counts (' + str(self.bin_size) + ' second bins)')
-        ax.set_xlim([0,86400])
-        plt.xlabel('Time (seconds)')
-        ax2 = ax.twinx()
-        ax2.plot(self.strikes_8km[0], self.strikes_8km[1], lw = 0, marker = 'o', color = 'g', alpha = 0.8)
-        ax2.set_ylabel('kilometers to lightning')
-        plt.show()
+    def plot_ec(self, ts, bin_size, time_window):
+    
+        for x in self.ecs:
+            print x
+            max_t = x + time_window
+            min_t = x - time_window
+            ec_ts = ts[np.logical_and(ts > min_t, ts < max_t)]
+            bin_num = np.linspace(min_t, max_t, (max_t - min_t)/bin_size)
+            counts = np.histogram(ec_ts, bin_num)[0]
+            bin_mid = bin_num[:-1] + bin_size/2
+            plt.plot(bin_mid, counts)
+            plt.xlim([min_t,max_t])
+            plt.ylim([0,max(counts)+5])
+            plt.show()
 
-    def loop_days(self, start_d, start_m, start_y, duration, bin_size, sigma, source = 'entln', window = 5):
-
-        self.time_window = window
-        self.source = source
-        loop_day = date(start_y, start_m, start_d)
+    def loop_days(self, d_str, duration = 1, bin_size = .002, sigma = 20, window = 5, source = 'wwlln', f_out = None):
+        
+        loop_day = dt.datetime.strptime(d_str, "%Y_%m_%d").date()
         n = duration/np.abs(duration)
-        for loop_day in [loop_day + timedelta(x) for x in range(0, duration, n)]:
-
-            self.date_str(loop_day.day, loop_day.month, loop_day.year)
-            self.nearby_lightning(source)
-            if len(self.strikes_8km[0]) == 0: continue
+        if f_out:
+            f_out = 'C:/Users/tetra/analysis/' + f_out + '.txt'
+            with open(file_out, 'a') as f:
+                f.write(self.loc + ' ' + str(self.box) + '\n')
+                f.write('from ' + str(loop_day) + ' until ' + str(loop_day + dt.timedelta(duration)) + '\n')
+                f.write(str(bin_size) + ' second bins at ' + str(sigma) + ' sigma above daily background rate' + '\n')
+                f.write('using ' + source + ' to search for lightning strikes within ' + str(window) + ' seconds of event' + '\n' + '\n')
+        
+        for loop_day in [loop_day + dt.timedelta(x) for x in range(0, duration, n)]:
+            d_str = ints_to_date(loop_day.day, loop_day.month, loop_day.year)
+            strikes_8km = lightning.nearby(self.loc, loop_day, source)
+            if len(strikes_8km[0]) == 0: continue
             try:
-                self.get_ts(loop_day.day, loop_day.month, loop_day.year)
+                timestamps = self.get_ts(loop_day.day, loop_day.month, loop_day.year)
             except IOError:
                 continue
-            #print loop_day
-            self.hist(bin_size)
-            self.event_search(sigma)
+            counts, bin_mid = self.hist(bin_size, timestamps)
+            self.event_search(counts, bin_mid, strikes_8km, d_str, bin_size, sigma, f_out, source, window)
+            
+            
+    def loop_days2(self, d_str, duration = 1, bin_size = .002, sigma = 20):
+        
+        loop_day = dt.datetime.strptime(d_str, "%Y_%m_%d").date()
+        n = duration/np.abs(duration)
+
+        for loop_day in [loop_day + dt.timedelta(x) for x in range(0, duration, n)]:
+            d_str = ints_to_date(loop_day.day, loop_day.month, loop_day.year)
+            try:
+                timestamps = self.get_ts(loop_day.day, loop_day.month, loop_day.year)
+            except IOError:
+                continue
+            counts, bin_mid = self.hist(bin_size, timestamps)
+
+            self.sig_search(counts, sigma, d_str)
+
+

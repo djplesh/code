@@ -1,3 +1,6 @@
+#fit_energy3: attempt to add in e^-E/7.3 in fit
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
@@ -73,7 +76,7 @@ def func(x, a, b):
         
 def fit_e2():
        
-    energies = np.load('C:/Users/tetra/analysis/energy/all_energies.npz')['energy']    
+    energies = np.load('C:/Users/tetra/analysis/energy/all_energies.npz')['energy']
     
     bins = np.linspace(0, 8, 50 + 1)
     a,b,c = plt.hist(energies, bins, histtype='step', color = 'black')
@@ -101,7 +104,7 @@ def fit_e2():
             s_bgo.append(float(line.split()[1]))
     bgo_exp = np.exp(-np.array(s_bgo)*7.13*2.54)
     sig_bgo = interpolate.interp1d(np.array(e_bgo), bgo_exp, kind = 'cubic')
-    sig = sig_bgo(es_new)    
+    sig = sig_bgo(es_new)
     
     scalar_data = mu * (1 - sig)
     

@@ -135,9 +135,11 @@ def event_search(box_num, start_date, time_window = 5, duration = 1, bin_size = 
             
             ave = np.average(all_counts)
             std = np.std(all_counts)
-            threshold_counts = np.ceil(ave + std * threshold)
-            print threshold_counts
-            if threshold_counts < 6:
+            min_counts = np.ceil(ave + std * threshold)
+            ec = np.where(np.array(all_counts) > min_counts)[0]
+            print len(ec)
+            print min_counts
+            if min_counts < 6:
                 continue
             above = all_counts - ave
             above[above < 0] = 0
@@ -146,35 +148,10 @@ def event_search(box_num, start_date, time_window = 5, duration = 1, bin_size = 
             bin_sig = bin_sig[bin_sig >= 0] 
             x = np.where(bin_sig >= threshold)[0]
             bgo_triggers = x
-            '''    
-            hist_file = path + 'hist_' + date_str[8:]+'.npz'
             
-            if not os.path.exists(hist_file):
-                continue
-            hist_data = np.load(hist_file)
-                  
-            hist_data2 = np.array(zip(hist_data['bins']*.002, hist_data['counts']))
             
-            try:
-                ave = np.sum(hist_data2, axis=0)[1]/43200000.0
-            except IndexError:
-                continue 
             
-            std = np.sqrt((np.sum((hist_data2-ave)**2, axis = 0)[1] \
-            + (43200000 - len(hist_data2))*ave**2)/(43200000-1))
             
-            threshold_counts = ave + std * threshold
-            print threshold_counts
-            if threshold_counts < 6:
-                continue
-            above = hist_data['counts'] - ave
-            above[above < 0] = 0
-            bin_sig = above / std
-            bin_sig = np.floor(bin_sig).astype(np.int32)
-            bin_sig = bin_sig[bin_sig >= 0] 
-            x = np.where(bin_sig >= threshold)[0]
-            bgo_triggers = x
-            '''
         elif len(box_num) > 1:
             #check on if there was lightning first, quicker than looping through boxes
             a, b = nearby_strikes(loc, date_str, source, True)
